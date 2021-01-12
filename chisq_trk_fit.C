@@ -7,6 +7,8 @@
 #include <map>
 #include <numeric>
 
+const int kNumWires = 500;
+
 const double width0 = 20;
 
 template<class T> T sqr(const T& x){return x*x;}
@@ -112,16 +114,16 @@ double chisq(const GausSum& as, const GausSum& bs)
   return (sqr(as-bs)).Area();
 }
 
-std::map<int, GausSum> gData;
+std::array<GausSum, kNumWires> gData;
 
 void add_track(double m, double c, double x0, double x1,
-               std::map<int, GausSum>& out)
+               std::array<GausSum, kNumWires>& out)
 {
   if(x0 > x1) std::swap(x0, x1);
 
   const Gaus g(1, 0, sqr(width0));
 
-  for(int i = 0; i < 500; ++i){
+  for(int i = 0; i < kNumWires; ++i){
     Gaus hit;
     hit.sigmaSq = sqr(width0);
     hit.mu = m*i+c;
@@ -139,29 +141,24 @@ void add_track(double m, double c, double x0, double x1,
   }
 }
 
-double chisq(const std::map<int, GausSum>& a,
-             const std::map<int, GausSum>& b)
+double chisq(const std::array<GausSum, kNumWires>& a,
+             const std::array<GausSum, kNumWires>& b)
 {
   double ret = 0;
-  for(int i = 0; i < 500; ++i){ // TODO loop over keys
-    auto ait = a.find(i);
-    auto bit = b.find(i);
-    ret += chisq(ait != a.end() ? ait->second : GausSum(),
-                 bit != b.end() ? bit->second : GausSum());
+  for(int i = 0; i < kNumWires; ++i){
+    ret += chisq(a[i], b[i]);
   }
   return ret;
 }
 
-void plot(const std::map<int, GausSum>& data)
+void plot(const std::array<GausSum, kNumWires>& data)
 {
-  TH2F* hdata = new TH2F("", "", 500, 0, 500, 500, 0, 500);
+  TH2F* hdata = new TH2F("", "", kNumWires, 0, kNumWires, 500, 0, 500);
 
-  for(auto it: data){
-    const int x = it.first;
-
+  for(unsigned int x = 0; x < kNumWires; ++x){
     for(int iy = 0; iy < hdata->GetNbinsY()+2; ++iy){
       const double y = hdata->GetYaxis()->GetBinCenter(iy);
-      hdata->Fill(x, y, it.second.Eval(y));
+      hdata->Fill(x, y, data[x].Eval(y));
     }
   }
 
@@ -192,7 +189,7 @@ public:
     const double x03 = pars[10];
     const double x13 = pars[11];
 
-    std::map<int, GausSum> pred;
+    std::array<GausSum, kNumWires> pred;
     add_track(m1, c1, x01, x11, pred);
     add_track(m2, c2, x02, x12, pred);
     add_track(m3, c3, x03, x13, pred);
@@ -252,7 +249,7 @@ void chisq_trk_fit()
   const double m = mnMin->X()[0];
   const double c = mnMin->X()[1];
 
-  std::map<int, GausSum> pred;
+  std::array<GausSum, kNumWires> pred;
   add_track(m, c, 0, 500, pred);
 
   new TCanvas;
