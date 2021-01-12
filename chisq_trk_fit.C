@@ -146,6 +146,8 @@ void add_track(double m, double c, double x0, double x1,
   const Gaus g(1, 0, sqr(width0));
 
   for(int i = 0; i < kNumWires; ++i){
+    if(i < x0-3*width0 || i > x1+3*width0) continue;
+
     Gaus hit;
     hit.sigmaSq = sqr(width0);
     hit.mu = m*i+c;
